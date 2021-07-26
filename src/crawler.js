@@ -4,6 +4,8 @@
  * Generic blockchain crawler that adds and removes transactions to the db
  */
 
+const { DEBUG } = require('./config')
+
 // ------------------------------------------------------------------------------------------------
 // Crawler
 // ------------------------------------------------------------------------------------------------
@@ -29,6 +31,8 @@ class Crawler {
   }
 
   start (height, hash) {
+    if (DEBUG) console.log('Starting crawler')
+
     if (this.started) return
 
     this.started = true
@@ -50,7 +54,11 @@ class Crawler {
 
   _expireMempoolTransactions () {
     if (!this.started) return
+
+    if (DEBUG) console.log('Expiring mempool transactions')
+
     if (this.onExpireMempoolTransactions) this.onExpireMempoolTransactions()
+
     this.expireMempoolTransactionsTimerId = setTimeout(
       this._expireMempoolTransactions.bind(this), this.expireMempoolTransactionsInterval)
   }
@@ -73,6 +81,8 @@ class Crawler {
   async _pollForNextBlock () {
     if (!this.started) return
 
+    if (DEBUG) console.log('Polling for next block')
+
     // Save the current query so we can check for a race condition after
     const currHeight = this.height
     const currHash = this.hash
@@ -87,6 +97,7 @@ class Crawler {
 
     // Case: reorg
     if (block && block.reorg) {
+      if (DEBUG) console.log('Reorg detected')
       this._rewindAfterReorg()
       setTimeout(() => this._pollForNextBlock(), 0)
       return
@@ -94,12 +105,14 @@ class Crawler {
 
     // Case: at the chain tip
     if (!block || block.height <= this.height) {
+      if (DEBUG) console.log('No new blocks')
       await this._listenForMempool()
       return
     }
 
     // Case: received a block
     if (block) {
+      if (DEBUG) console.log('Received new block at height', block.height)
       if (this.onCrawlBlockTransactions) {
         this.onCrawlBlockTransactions(block.height, block.hash, block.time, block.txids, block.txhexs)
       }

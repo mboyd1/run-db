@@ -9,7 +9,9 @@ const morgan = require('morgan')
 const bodyParser = require('body-parser')
 const bsv = require('bsv')
 const crypto = require('crypto')
+const cors = require('cors')
 const Run = require('run-sdk')
+const { DEBUG } = require('./config')
 
 // ------------------------------------------------------------------------------------------------
 // Globals
@@ -31,12 +33,16 @@ class Server {
   }
 
   start () {
+    if (DEBUG) console.log('Starting server')
+
     const app = express()
 
     if (this.logger) app.use(morgan('tiny'))
 
     app.use(bodyParser.text({ limit: '10mb' }))
     app.use(bodyParser.json({ limit: '10mb' }))
+
+    app.use(cors({ origin: '*' }))
 
     app.get('/jig/:location', this.getJig.bind(this))
     app.get('/berry/:location', this.getBerry.bind(this))
@@ -46,7 +52,6 @@ class Server {
     app.get('/unspent', this.getUnspent.bind(this))
     app.get('/trust/:txid?', this.getTrust.bind(this))
     app.get('/ban/:txid?', this.getBan.bind(this))
-    app.get('/untrusted/:txid?', this.getUntrusted.bind(this))
     app.get('/status', this.getStatus.bind(this))
 
     app.post('/trust/:txid?', this.postTrust.bind(this))
@@ -177,13 +182,6 @@ class Server {
       } else {
         res.json(Array.from(this.indexer.database.getBanlist()))
       }
-    } catch (e) { next(e) }
-  }
-
-  async getUntrusted (req, res, next) {
-    try {
-      const untrusted = this.indexer.untrusted(req.params.txid)
-      res.json(untrusted)
     } catch (e) { next(e) }
   }
 
